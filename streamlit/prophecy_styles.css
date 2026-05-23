@@ -1,0 +1,506 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --reassort-table-border: #e7e3e4;
+    --card-border: #dbe5e7;
+    --card-shadow: 0 2px 8px rgba(15, 81, 82, 0.08);
+    --card-shadow-hover: 0 6px 16px rgba(15, 81, 82, 0.14);
+}
+
+/* Ajustement du positionnement global sous la navbar Streamlit */
+[data-testid="stMainBlockContainer"],
+[data-testid="stAppViewContainer"] .main .block-container,
+[data-testid="stAppViewContainer"] [data-testid="stMain"] .block-container {
+    padding-top: 1.5rem !important;
+}
+@media (max-width: 900px) {
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stAppViewContainer"] .main .block-container,
+    [data-testid="stAppViewContainer"] [data-testid="stMain"] .block-container {
+        padding-top: 1.3rem !important;
+    }
+}
+
+/* Blocs Prophecy injectés (st.html) : police alignée sur le thème Streamlit */
+.custom-header,
+.kpi-grid,
+.metric-card {
+    font-family: var(--st-font, 'Inter', system-ui, sans-serif);
+}
+
+.header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.header-title-row .header-title {
+    margin: 0;
+}
+/* Streamlit coupe souvent le débordement (colonnes / markdown) → tooltips invisibles */
+[data-testid="stMarkdownContainer"],
+[data-testid="stMarkdown"],
+[data-testid="stMarkdownContainer"] div[data-testid="stMarkdown"] {
+    overflow: visible !important;
+}
+[data-testid="column"],
+[data-testid="column"] > div {
+    overflow: visible !important;
+}
+
+.kpi-tooltip-host {
+    position: relative;
+    display: inline-flex;
+    z-index: 2;
+}
+.kpi-tooltip-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    color: var(--st-primary-color);
+    cursor: help;
+    border-radius: 50%;
+    line-height: 0;
+    opacity: 0.9;
+}
+.kpi-tooltip-btn:hover,
+.kpi-tooltip-btn:focus-visible {
+    opacity: 1;
+    outline: 2px solid color-mix(in srgb, var(--st-primary-color) 45%, transparent);
+    outline-offset: 2px;
+}
+.kpi-tooltip-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+.kpi-tooltip-bubble {
+    position: absolute;
+    z-index: 99999;
+    left: 50%;
+    /* Sous l’icône : reste dans la carte et évite le clip du haut des colonnes Streamlit */
+    top: calc(100% + 10px);
+    bottom: auto;
+    transform: translateX(-50%);
+    min-width: 200px;
+    max-width: min(280px, 85vw);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--st-text-color);
+    background: var(--st-secondary-background-color);
+    border: 1px solid var(--st-border-color);
+    border-radius: var(--st-base-radius, 8px);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--st-text-color) 16%, transparent);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.kpi-tooltip-bubble::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border: 6px solid transparent;
+    border-bottom-color: var(--st-secondary-background-color);
+}
+.kpi-tooltip-host:hover .kpi-tooltip-bubble,
+.kpi-tooltip-host:focus-within .kpi-tooltip-bubble {
+    visibility: visible;
+    opacity: 1;
+}
+/* Cartes KPI : surface claire (thème Streamlit), pas le dégradé vert du bandeau */
+.metric-card.custom-header {
+    margin-bottom: 0;
+    padding: clamp(14px, 3vw, 18px) clamp(16px, 3vw, 22px);
+    border-radius: 14px;
+    box-sizing: border-box;
+    background: #ffffff;
+    color: var(--st-text-color);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.metric-card.custom-header:hover {
+    transform: translateY(-2px);
+    border-color: #bfd6d8;
+    box-shadow: var(--card-shadow-hover);
+}
+.metric-card .header-title-row {
+    margin-bottom: 6px;
+}
+.metric-card .header-title {
+    font-size: clamp(13px, 1.5vw, 14px);
+    margin-bottom: 0;
+    color: var(--st-gray-text-color, var(--st-text-color));
+    font-weight: 500;
+    opacity: 0.92;
+}
+.metric-card .header-value {
+    font-size: clamp(1.35rem, 1rem + 2.2vw, 2rem);
+    line-height: 1.2;
+    letter-spacing: -0.4px;
+    color: var(--st-primary-color, #0f5152) !important;
+}
+.metric-card .metric-subtitle {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--st-gray-text-color, var(--st-text-color));
+    opacity: 0.9;
+}
+.metric-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--st-primary-color);
+    opacity: 0.95;
+}
+.metric-card-icon svg,
+.metric-card-icon img {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.kpi-grid {
+    display: grid;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    gap: clamp(10px, 2.2vw, 16px);
+    grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 36rem) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: clamp(12px, 2.4vw, 18px);
+    }
+}
+@media (min-width: 60rem) {
+    .kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: clamp(12px, 2.5vw, 18px);
+    }
+}
+.kpi-grid-item {
+    min-width: 0;
+    display: flex;
+}
+.kpi-grid-item--full {
+    grid-column: 1 / -1;
+}
+.kpi-grid .metric-card.custom-header {
+    width: 100%;
+    flex: 1;
+}
+
+/* KPI RFM : 4 cartes sur une ligne en desktop + style un peu plus premium */
+.kpi-grid--rfm {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: clamp(10px, 1.8vw, 14px);
+}
+@media (min-width: 44rem) {
+    .kpi-grid--rfm {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (min-width: 72rem) {
+    .kpi-grid--rfm {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+.kpi-grid--rfm .metric-card.custom-header {
+    position: relative;
+    padding: clamp(12px, 1.4vw, 16px);
+    border-radius: 14px;
+}
+.kpi-grid--rfm .metric-card.custom-header:hover {
+    transform: translateY(-2px);
+}
+.kpi-grid--rfm .metric-card .header-title {
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.95;
+}
+.kpi-grid--rfm .metric-card .header-value {
+    font-size: clamp(1.55rem, 1.1rem + 1.1vw, 2.15rem);
+    letter-spacing: -0.3px;
+}
+.kpi-grid--rfm .metric-card .metric-subtitle {
+    margin-top: 6px;
+    font-size: 12.5px;
+    opacity: 0.85;
+}
+.kpi-grid--rfm .metric-card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--st-primary-color) 11%, transparent);
+}
+.kpi-grid--rfm .metric-card-icon img {
+    width: 16px;
+    height: 16px;
+}
+
+.custom-header {
+    background: linear-gradient(135deg, #0f5152 0%, #1a7170 100%);
+    border-radius: 20px;
+    padding: 32px;
+    color: white;
+    margin-bottom: 32px;
+    box-shadow: 0 10px 20px rgba(15, 81, 82, 0.15);
+}
+
+/* Même style de card pour les blocs graphiques (st.container(border=True)) */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: #ffffff;
+    border: 1px solid var(--card-border) !important;
+    border-radius: 14px !important;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    transform: translateY(-2px);
+    border-color: #bfd6d8 !important;
+    box-shadow: var(--card-shadow-hover);
+}
+
+/* Bandeau titre de page uniquement (pas les cartes KPI .metric-card) : remonte sous la barre Streamlit */
+.custom-header:not(.metric-card) {
+    margin-top: -0.35rem;
+}
+.header-title {
+    font-size: 15px;
+    color: #BBE1E3;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+.header-value {
+    font-size: 42px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+.header-trend {
+    color: #34D399;
+    font-size: 15px;
+    font-weight: 500;
+    margin-left: 16px;
+    background: rgba(52, 211, 153, 0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+/* Réassort : tableau en grille, scroll vertical + horizontal (colonnes nombreuses / mobile) */
+.reassort-wrap {
+    font-family: var(--st-font, 'Inter', system-ui, sans-serif);
+    font-size: var(--st-base-font-size, 1rem);
+    color: var(--st-text-color);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 0.5px solid var(--reassort-table-border);
+    border-radius: var(--st-base-radius, 12px);
+    overflow: hidden;
+}
+/* Un seul tableau : scroll H+V ici ; colonnes toujours alignées */
+.reassort-x-scroll {
+    position: relative;
+    isolation: isolate;
+    max-width: 100%;
+    max-height: min(55vh, 520px);
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    scrollbar-color: var(--st-border-color) var(--st-secondary-background-color);
+    border: none;
+    border-radius: 0;
+    background: var(--st-secondary-background-color);
+    box-shadow: none;
+}
+.reassort-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    position: relative;
+    font-size: 14px;
+    color: var(--st-text-color);
+    table-layout: auto;
+    width: max-content;
+    min-width: 100%;
+    border: 0.5px solid var(--reassort-table-border);
+}
+.reassort-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+.reassort-table thead th {
+    position: sticky !important;
+    top: 0;
+    z-index: 30 !important;
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    color: var(--st-text-color);
+    background-color: var(
+        --st-dataframe-header-background-color,
+        #ffffff
+    ) !important;
+    white-space: nowrap;
+    border-right: 0.5px solid var(--reassort-table-border);
+    border-bottom: 0.5px solid var(--reassort-table-border);
+    background-clip: padding-box;
+    box-shadow: none;
+}
+.reassort-table thead tr {
+    position: relative !important;
+    z-index: 25 !important;
+}
+.reassort-table thead th:last-child {
+    border-right: none;
+}
+.reassort-table tbody td {
+    padding: 10px 12px;
+    border-right: 0.5px solid var(--reassort-table-border);
+    border-bottom: 0.5px solid var(--reassort-table-border);
+    vertical-align: middle;
+    background-color: var(--st-secondary-background-color);
+    overflow-wrap: anywhere;
+}
+.reassort-table tbody td:last-child {
+    border-right: none;
+}
+.reassort-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.reassort-table tbody tr:hover td {
+    background-color: color-mix(
+        in srgb,
+        var(--st-primary-color) 12%,
+        var(--st-secondary-background-color)
+    );
+}
+.reassort-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 9999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+.reassort-badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.reassort-badge-icon svg,
+.reassort-badge-icon img {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+.reassort-badge-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* Pastilles de statut : couleurs sémantiques fixes (lisibles sur fond clair ou sombre) — pas les --st-* ici,
+   car elles peuvent se fondre dans le thème ou mal hériter depuis st.html. */
+.reassort-badge--default {
+    background: #CCEDED;
+    color: #0f5152;
+}
+.reassort-badge--secondary {
+    background: #F3F4F6;
+    color: #374151;
+}
+.reassort-badge--destructive {
+    background: #FEE2E2;
+    color: #991b1b;
+}
+.reassort-badge--warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+.reassort-badge--success {
+    background: #d1fae5;
+    color: #065f46;
+}
+.reassort-badge--info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.reassort-badge--muted {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+.reassort-badge--outline {
+    background: transparent;
+    color: var(--st-text-color, #374151);
+    border: 1px solid var(--st-border-color, #d1d5db);
+}
+/* Vue cartes désactivée : le tableau avec défilement horizontal couvre le mobile */
+.reassort-cards {
+    display: none !important;
+    flex-direction: column;
+    gap: 12px;
+}
+.reassort-card {
+    border: 2px solid var(--st-border-color);
+    border-radius: var(--st-base-radius, 12px);
+    padding: 14px 16px;
+    background: var(--st-secondary-background-color);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--st-text-color) 5%, transparent);
+}
+.reassort-card-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+.reassort-card-row:last-child {
+    margin-bottom: 0;
+}
+.reassort-card-label {
+    font-size: 12px;
+    color: var(--st-gray-text-color);
+    font-weight: 500;
+}
+.reassort-card-value {
+    font-size: 14px;
+    color: var(--st-text-color);
+    word-break: break-word;
+}
+@media (max-width: 900px) {
+    .reassort-x-scroll {
+        max-height: min(60vh, 560px);
+    }
+}
+
+/* st.page_link : pas de paramètre height dans l’API ; le lien réel porte data-testid="stPageLink-NavLink". */
+section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
+    min-height: 3.25rem;
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+    box-sizing: border-box;
+}
