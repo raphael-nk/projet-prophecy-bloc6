@@ -2,6 +2,10 @@ import os
 
 import streamlit as st
 
+from dashboard_page import run_dashboard
+from reassort_page import _inject_prophecy_styles, run_reassort
+from segmentation_page import run_segmentation
+
 st.set_page_config(
     page_title="Prophecy",
     page_icon="img/favicon.png",
@@ -9,32 +13,55 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-logo_path = "img/prophecy_logo.png"
-if os.path.exists(logo_path):
-    st.image(logo_path, width=280)
-else:
-    st.title("Prophecy")
+_inject_prophecy_styles()
 
-st.markdown(
-    """
-## Plateforme Prophecy — Nexthope
-
-Deux modules ML unifiés derrière une API unique :
-
-| Module | Description |
-|--------|-------------|
-| **Réassort** | Prédiction XGBoost 30j, alertes stock, obsolescence |
-| **Segmentation** | Segments RFM, profils KMeans, recommandations |
-
-Utilisez le menu latéral pour ouvrir le tableau de bord réassort ou la segmentation clients.
-"""
+dashboard_page = st.Page(
+    run_dashboard,
+    title="Tableau de bord",
+    icon=":material/dashboard:",
+    default=True,
+)
+reassort_page = st.Page(
+    run_reassort,
+    title="Réassort",
+    icon=":material/inventory_2:",
+)
+segmentation_page = st.Page(
+    run_segmentation,
+    title="Segmentation RFM & Profils",
+    icon=":material/segment:",
 )
 
-api_url = os.environ.get("API_URL", "http://localhost:8000")
-st.caption(f"API : `{api_url}` — documentation : [{api_url}/docs]({api_url}/docs)")
+pg = st.navigation(
+    [dashboard_page, reassort_page, segmentation_page],
+    position="hidden",
+)
 
-col1, col2 = st.columns(2)
-with col1:
-    st.page_link("pages/1_reassort.py", label="Tableau de bord réassort", icon="📦")
-with col2:
-    st.page_link("pages/2_segmentation.py", label="Segmentation RFM & profils", icon="👥")
+logo_path = "img/prophecy_logo.png"
+with st.sidebar:
+    if os.path.exists(logo_path):
+        st.image(logo_path, use_container_width=True)
+    else:
+        st.title("Prophecy")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.divider()
+    st.page_link(
+        dashboard_page,
+        label="Tableau de bord",
+        icon=":material/dashboard:",
+        use_container_width=True,
+    )
+    st.page_link(
+        reassort_page,
+        label="Réassort",
+        icon=":material/inventory_2:",
+        use_container_width=True,
+    )
+    st.page_link(
+        segmentation_page,
+        label="Segments Clients",
+        icon=":material/segment:",
+        use_container_width=True,
+    )
+
+pg.run()

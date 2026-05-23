@@ -9,10 +9,14 @@ import requests
 import streamlit as st
 import base64
 
-API_URL = os.environ.get("API_URL", "http://localhost:8000")
-REASSORT_API = f"{API_URL}/reassort"
-
-st.set_page_config(page_title="Réassort", page_icon="img/favicon.png", layout="wide")
+from api_client import (
+    API_URL,
+    get_reassort_categories,
+    get_reassort_products,
+    get_reassort_stats,
+    products_to_dataframe,
+    reassort_ready,
+)
 
 
 def _svg_to_data_uri(svg_markup: str) -> str:
@@ -143,7 +147,7 @@ def _kpi_metrics_section_html(data_stats: dict, cost_display: str, coverage_disp
             icon_svg=_KPI_SVG["cart"],
         ),
         _kpi_metric_card_html(
-            "Coût estimé du réassort",
+            "Coût estimé du réassort (MGA)",
             cost_display,
             icon_svg=_KPI_SVG["euro"],
         ),
@@ -535,7 +539,7 @@ def _reassort_dataframe_html(df: pd.DataFrame, stock_color_map: dict[str, str] |
 
 def _prophecy_stylesheet_path() -> str:
     """Chemin vers prophecy_styles.css (répertoire streamlit/)."""
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "prophecy_styles.css")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "prophecy_styles.css")
 
 
 def _inject_prophecy_styles() -> None:
@@ -546,175 +550,168 @@ def _inject_prophecy_styles() -> None:
     st.html(f"<style>\n{css}\n</style>")
 
 
-def load_stats():
-    response = requests.get(f"{REASSORT_API}/stats")
-    return response.json()
-
-def load_categories():
-    response = requests.get(f"{REASSORT_API}/categories")
-    return response.json()['data']
-
-
-def make_reassort(category_id, urgency_selected, growth_selected, quantity_selected, limit_selected, offset_selected):
-    payload = {
-        'category_id': category_id,
-        'alert': urgency_selected,
-        'cycle': growth_selected,
-        'min_qty': quantity_selected,
-        'limit': limit_selected,
-        'offset': offset_selected
-    }
-    response = requests.get(f"{REASSORT_API}/products", params=payload)
-    result = []
-    if response.status_code == 200:
-        data = response.json()
-        if len(data['data']) > 0:
-            for item in data['data']:
-                result.append({
-                    'Article': item['product_name'],
-                    'Ventes prévues en 30 jours': item['ventes_prevues_30j'],
-                    'Quantité en stock': item['qty_available'],
-                    'Quantité à commander': item['qty_to_order'],
-                    'Etat de l\'article': item['cycle_status'],
-                    'Etat du stock': item['alert'],
-                    'Date idéale pour commander': item['order_by_date']
-                })
-            df = pd.DataFrame(result)
-            return df
-        else:
-            return pd.DataFrame()
-    else:
-        return pd.DataFrame()
-
-
-@st.cache_data
-def load_data():
-    s3 = boto3.client(
-        's3',
-        aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY'),
-        region_name = os.environ.get('AWS_REGION'),
-    )
-
-    response = s3.get_object(Bucket=os.environ.get('AWS_BUCKET_NAME'), Key="demoday-dataset/sales_history.parquet")
-
-    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-    if status == 200:
-        body = response.get('Body')
-        buffer = io.BytesIO(body.read())
-        data = pd.read_parquet(buffer)
-        data['is_sold'] = data['qty_sold'].apply(lambda x: "Sold" if x > 0 else "Not Sold")
-        return data
-    else:
-        return None
-
-def top_data(data, column_name, top_n=None):
-    value_counts = data[column_name].value_counts(normalize=False)
-    result = pd.DataFrame({
-        column_name: value_counts.index,
-        "count": value_counts.values
-    })
-    if top_n is not None:
-        return result.head(top_n)
-    else:
-        return result
-
 def get_encoded_image():
     image_path = "img/reassort_icon.png"
     with open(image_path, "rb") as image_file:
         encoded = base64.b64encode(image_file.read()).decode()
     return encoded
 
-def load_grouped_reassort():
-    response = requests.get(f"{REASSORT_API}/grouped-reassort")
-    return response.json()
-
-def main():
-    data_stats = load_stats()
-    data_categories = load_categories()
+def run_reassort() -> None:
     encoded = get_encoded_image()
-    img_tag = f'<img src="data:image/png;base64,{encoded}" width="28" style="vertical-align:middle; margin-right:10px;"/>'
+    img_tag = (
+        f'<img src="data:image/png;base64,{encoded}" width="28" '
+        'style="vertical-align:middle; margin-right:10px;"/>'
+    )
     st.html(
-            f"""
+        """
         <div class="custom-header">
             <div class="header-title">Prophecy</div>
-            <div class="header-value" style="font-size: 28px;">Tableau de bord</div>
+            <div class="header-value" style="font-size: 28px;">Réassort</div>
         </div>
         """
     )
 
-    cost_raw = data_stats["estimated_total_cost"]
-    cost_display = _fmt_compact_number(cost_raw)
-    try:
-        coverage_display = f"{float(data_stats['avg_coverage_days']):.2f} jours"
-    except (TypeError, ValueError):
-        coverage_display = str(data_stats["avg_coverage_days"])
-
-    st.html(
-        _kpi_metrics_section_html(data_stats, cost_display, coverage_display),
+    if not reassort_ready():
+        st.warning(
+            "⏳ L'API termine le calcul réassort (XGBoost). "
+            "Attendez le message « Réassort prêt » dans les logs `api`, puis rafraîchissez."
         )
 
-    st.markdown(f"### {img_tag} Etat de stock sur 30 jours", unsafe_allow_html=True)
+    try:
+        with st.spinner("Chargement réassort (instantané si l'API a déjà pré-calculé)…"):
+            data_stats = get_reassort_stats()
+            data_categories = get_reassort_categories()
+    except requests.RequestException as exc:
+        st.error(
+            f"API réassort indisponible (`{API_URL}`).\n\n{exc}\n\n"
+            "Vérifiez `docker compose logs api` — le 1er démarrage peut prendre 2–3 minutes."
+        )
+        return
+
+    base_colors = ["#025864", "#00d47e", "#f4c095", "#ee2e31", "#63474d"]
+    alerts_dict = data_stats.get("alerts") or {}
+    alert_to_color = {
+        alert: base_colors[i % len(base_colors)]
+        for i, alert in enumerate(alerts_dict.keys())
+    }
+
+    st.markdown(f"### {img_tag} État de stock sur 30 jours", unsafe_allow_html=True)
     with st.container(border=True):
-        with st.container():
-            data_grouped_reassort_dict = data_stats['alerts']
-            
-            data_grouped_reassort = [
-                {"alert": key, "qty_to_order": value}
-                for key, value in data_grouped_reassort_dict.items()
-            ]
-            base_colors = ['#025864', '#00d47e', '#f4c095', '#ee2e31', '#63474d']
-            alert_to_color = {
-                row["alert"]: base_colors[i % len(base_colors)]
-                for i, row in enumerate(data_grouped_reassort)
-            }
+        data_grouped = [
+            {"alert": k, "qty_to_order": v} for k, v in alerts_dict.items()
+        ]
+        if data_grouped:
             fig = px.bar(
-                data_grouped_reassort,
-                x='alert',
-                y='qty_to_order',
-                color='alert',
+                data_grouped,
+                x="alert",
+                y="qty_to_order",
+                color="alert",
                 color_discrete_map=alert_to_color,
-                labels={
-                    "alert": "Etat du stock",
-                    "qty_to_order": "Quantité à commander",
-                },
+                labels={"alert": "État du stock", "qty_to_order": "Quantité à commander"},
             )
-            fig.update_layout(showlegend=False)
-            st.plotly_chart(fig)
-    
-    
-    
+            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
+            st.plotly_chart(fig, use_container_width=True)
+
     st.markdown(
         f"### {img_tag} Recommandations d'approvisionnement",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
-    with st.container():
-        category_selected = st.selectbox("Filtrer par catégorie", placeholder="Choisir une catégorie", options=[category['category'] for category in data_categories], index=None)
+
+    category_labels = [c["category"] for c in data_categories]
+    alert_options = [
+        "Rupture imminente",
+        "Forte demande",
+        "À commander",
+        "Stable",
+        "Stock OK",
+        "Ne pas recommander",
+    ]
+    cycle_options = ["Croissance", "Maturité", "Déclin", "Obsolescence", "Inactif"]
+
+    if "applied_reassort_filters" not in st.session_state:
+        st.session_state.applied_reassort_filters = {
+            "category": None,
+            "alert": None,
+            "cycle": None,
+            "min_qty": 1,
+            "limit": 100,
+            "offset": 0,
+        }
+
+    with st.form("reassort_search_form", clear_on_submit=False):
+        category_selected = st.selectbox(
+            "Filtrer par catégorie",
+            options=[None] + category_labels,
+            format_func=lambda x: "Toutes" if x is None else x,
+            index=0,
+        )
         col_1_1, col_1_2, col_1_3 = st.columns(3)
-        col_2_1, col_2_2 = st.columns(2)
-        category_id = None
-        if category_selected is not None:
-            category_id = [category['category_id'] for category in data_categories if category['category'] == category_selected][0]
+        col_2_1, col_2_2, col_2_3 = st.columns(3)
         with col_1_1:
-            # Rupture imminente, Forte demande, À commander, Stable, Stock OK, Ne pas recommander
-            urgency_selected = st.selectbox("Niveau d'alerte", placeholder="Choisir un niveau d'alerte", options=["Rupture imminente", "Forte demande", "À commander", "Stable", "Stock OK", "Ne pas recommander"], index=None)
+            urgency_selected = st.selectbox(
+                "Niveau d'alerte",
+                options=[None] + alert_options,
+                format_func=lambda x: "Tous" if x is None else x,
+                index=0,
+            )
         with col_1_2:
-            #Croissance, Maturité, Déclin, Obsolescence, Inactif
-            growth_selected = st.selectbox("Tendance des ventes", placeholder="Choisir une tendance des ventes", options=["Croissance", "Maturité", "Déclin", "Obsolescence", "Inactif"], index=None)
+            growth_selected = st.selectbox(
+                "Tendance des ventes",
+                options=[None] + cycle_options,
+                format_func=lambda x: "Toutes" if x is None else x,
+                index=0,
+            )
         with col_1_3:
-            #Quantité à commander minimum
-            quantity_selected = st.number_input("Quantité à commander minimum", min_value=1, value=1, step=1)
+            quantity_selected = st.number_input(
+                "Quantité à commander minimum", min_value=0, value=1, step=1
+            )
         with col_2_1:
-            limit_selected = st.number_input("Limite de résultats", min_value=1, value=100, step=50)
+            limit_selected = st.number_input(
+                "Limite de résultats", min_value=1, value=100, step=50
+            )
         with col_2_2:
             offset_selected = st.number_input("Décalage", min_value=0, value=0, step=50)
-        data_reassort = make_reassort(category_id, urgency_selected, growth_selected, quantity_selected, limit_selected, offset_selected)
-        st.html("<br>")
-        if len(data_reassort) > 0:
-            st.html(_reassort_dataframe_html(data_reassort, stock_color_map=alert_to_color))
-        else:
-            st.error("Pas de recommandations d'approvisionnement trouvées")
+        with col_2_3:
+            st.write("")
+            submitted = st.form_submit_button("Rechercher", type="primary", use_container_width=True)
 
+    if submitted:
+        st.session_state.applied_reassort_filters = {
+            "category": category_selected,
+            "alert": urgency_selected,
+            "cycle": growth_selected,
+            "min_qty": int(quantity_selected),
+            "limit": int(limit_selected),
+            "offset": int(offset_selected),
+        }
 
-_inject_prophecy_styles()
-main()
+    f = st.session_state.applied_reassort_filters
+    category_id = None
+    if f.get("category"):
+        category_id = next(
+            (c["category_id"] for c in data_categories if c["category"] == f["category"]),
+            None,
+        )
+
+    try:
+        with st.spinner("Chargement des produits…"):
+            payload = get_reassort_products(
+                category_id=category_id,
+                alert=f.get("alert"),
+                cycle=f.get("cycle"),
+                min_qty=f.get("min_qty", 1),
+                limit=f.get("limit", 100),
+                offset=f.get("offset", 0),
+            )
+    except requests.RequestException as exc:
+        st.error(f"Erreur lors du chargement des produits : {exc}")
+        return
+
+    data_reassort = products_to_dataframe(payload)
+    total = payload.get("total", len(data_reassort))
+    st.caption(f"{total} produit(s) correspondant aux filtres")
+    st.html("<br>")
+    if len(data_reassort) > 0:
+        st.html(_reassort_dataframe_html(data_reassort, stock_color_map=alert_to_color))
+    else:
+        st.info("Aucune recommandation pour ces filtres. Élargissez la recherche.")

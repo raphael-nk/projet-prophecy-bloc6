@@ -5,6 +5,18 @@ services:
       dockerfile: api/Dockerfile
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json, urllib.request; d=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)); assert d.get('reassort_ready') is True",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
     volumes:
       - ./models:/app/models:ro
       - ./data:/app/data:ro
@@ -25,6 +37,7 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     environment:
       - API_URL=http://api:8000

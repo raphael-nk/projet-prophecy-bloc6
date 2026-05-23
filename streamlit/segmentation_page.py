@@ -7,14 +7,14 @@ import plotly.express as px
 import requests
 import streamlit as st
 
-API_URL = os.environ.get("API_URL", "http://localhost:8000")
-SEG_API = f"{API_URL}/segmentation"
+from api_client import SEG_API, get_segmentation_kpis, get_segmentation_segments
+from formatting import fmt_money_mga
 
-st.set_page_config(page_title="Segmentation RFM", page_icon="img/favicon.png", layout="wide")
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
 
 
 def _prophecy_stylesheet_path() -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "prophecy_styles.css")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "prophecy_styles.css")
 
 
 def _inject_prophecy_styles() -> None:
@@ -113,14 +113,6 @@ def _fmt_grouped_int(n) -> str:
         return str(n)
 
 
-def _fmt_money_ar(n) -> str:
-    try:
-        amount = f"{float(n):,.2f}".replace(",", " ").replace(".", ",")
-        return f"Ar {amount}"
-    except (TypeError, ValueError):
-        return str(n)
-
-
 def _fmt_percent(n, decimals: int = 2) -> str:
     try:
         value = f"{float(n):.{decimals}f}".replace(".", ",")
@@ -150,8 +142,8 @@ def _rfm_kpis_section_html(kpis: dict, at_risk_count: int | None = None, at_risk
             icon_emoji="👥",
         ),
         _rfm_kpi_card_html(
-            "Valeur Moyenne",
-            _fmt_money_ar(kpis.get("average_monetary")),
+            "Valeur moyenne (MGA)",
+            fmt_money_mga(kpis.get("average_monetary")),
             "Panier moyen cumulé",
             icon_emoji="💰",
         ),
@@ -174,15 +166,11 @@ def _rfm_kpis_section_html(kpis: dict, at_risk_count: int | None = None, at_risk
 
 
 def load_segments_rfm():
-    response = requests.get(f"{SEG_API}/segments")
-    return response.json()
+    return get_segmentation_segments()
 
 
 def load_rfm_dashboard_kpis():
-    response = requests.get(f"{SEG_API}/dashboard/kpis")
-    if response.status_code == 200:
-        return response.json()
-    return {}
+    return get_segmentation_kpis()
 
 
 def load_segment_interests(top_n: int = 3):
@@ -332,7 +320,7 @@ def _inject_rfm_table_css() -> None:
     )
 
 
-def main():
+def run_segmentation():
     data_segments = load_segments_rfm()
     data_rfm_kpis = load_rfm_dashboard_kpis()
     by_segment = data_segments.get("by_segment", []) if isinstance(data_segments, dict) else []
@@ -381,7 +369,7 @@ def main():
 
         with col1:
             with st.container(border=True):
-                st.markdown("#### CA par segment")
+                st.markdown("#### CA par segment (MGA)")
                 if not ca_df.empty:
                     fig_bar_ca = px.bar(
                         ca_df,
@@ -399,7 +387,7 @@ def main():
                     )
                     st.plotly_chart(fig_bar_ca, use_container_width=True)
                     top_ca = ca_df.iloc[0]
-                    st.caption(f"Top CA: **{top_ca['segment']}** ({_fmt_money_ar(top_ca['ca'])}).")
+                    st.caption(f"Top CA: **{top_ca['segment']}** ({fmt_money_mga(top_ca['ca'])}).")
                 else:
                     st.info("Aucune donnée de CA par segment.")
 
@@ -583,7 +571,7 @@ def main():
             "Tag_Interest": "Intérêt principal",
             "recency_days": "Dernier achat (jours)",
             "frequency": "Fréquence d’achat",
-            "monetary": "Chiffre d’affaires",
+            "monetary": "Chiffre d’affaires (MGA)",
             "last_purchase": "Date dernier achat",
             "Tag_B2B": "Client B2B",
             "Tag_Christmas_Shopper": "Acheteur Noël",
@@ -627,7 +615,3 @@ def main():
                 .set_properties(subset=numeric_display_cols, **{"text-align": "right"})
             )
         st.dataframe(styled_df, use_container_width=True, hide_index=True, height=table_height)
-
-
-_inject_prophecy_styles()
-main()

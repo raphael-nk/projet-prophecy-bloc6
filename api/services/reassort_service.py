@@ -36,3 +36,14 @@ def get_categories() -> list:
 def reload_reassort():
     get_reassort_df.cache_clear()
     get_categories.cache_clear()
+
+
+def is_reassort_ready() -> bool:
+    """True une fois le DataFrame réassort en cache (après 1er calcul ou warmup)."""
+    return get_reassort_df.cache_info().currsize > 0
+
+
+def warm_reassort_cache() -> None:
+    """Pré-calcul au démarrage API — évite 2–3 min d'attente sur la 1ère requête HTTP."""
+    get_reassort_df()
+    get_categories()

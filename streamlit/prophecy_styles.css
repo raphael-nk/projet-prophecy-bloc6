@@ -497,6 +497,20 @@
     }
 }
 
+/* Sidebar : aligné sur prophecy.origino.app */
+section[data-testid="stSidebar"] {
+    background-color: #fafbfc;
+    border-right: 1px solid #e5e7eb;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+    padding-top: 1rem;
+}
+section[data-testid="stSidebar"] img {
+    max-width: 200px;
+    margin: 0 auto;
+    display: block;
+}
+
 /* st.page_link : pas de paramètre height dans l’API ; le lien réel porte data-testid="stPageLink-NavLink". */
 section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
     min-height: 3.25rem;
