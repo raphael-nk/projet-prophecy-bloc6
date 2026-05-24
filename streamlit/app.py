@@ -25,11 +25,13 @@ reassort_page = st.Page(
     run_reassort,
     title="Réassort",
     icon=":material/inventory_2:",
+    url_path="reassort",
 )
 segmentation_page = st.Page(
     run_segmentation,
     title="Segmentation RFM & Profils",
     icon=":material/segment:",
+    url_path="segmentation",
 )
 
 pg = st.navigation(
