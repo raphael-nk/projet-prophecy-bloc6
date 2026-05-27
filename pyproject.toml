@@ -1,0 +1,34 @@
+[project]
+name = "projet-prophecy-bloc6"
+version = "2.0.0"
+description = "Plateforme décisionnelle Prophecy — segmentation RFM/KMeans + réapprovisionnement XGBoost, FastAPI + Streamlit (Bloc 6 CDSD)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "pandas>=2.0.0",
+    "numpy>=1.26.0",
+    "xgboost>=2.0.0",
+    "joblib>=1.3.0",
+]
+streamlit = [
+    "streamlit>=1.45.0",
+    "pandas>=2.0.0",
+    "numpy>=1.26.0",
+    "plotly>=5.0.0",
+    "requests>=2.31.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["services", "routers"]
