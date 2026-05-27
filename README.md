@@ -4,7 +4,7 @@
 
 # Projet Prophecy — Plateforme de réassort prédictif et segmentation clients
 
-**Bloc 6 — Projet Final (Lead)** · Certification RNCP CDSD — Jedha
+**Bloc 6 — Projet Final (Lead)** · Certification CDSD RNCP35288 - Niveau 6 · [Jedha Bootcamp](https://www.jedha.co/)
 
 ## Accès en ligne (production)
 
@@ -230,4 +230,4 @@ streamlit run app.py
 - Stéphane CHAN HIOU KONG
 - Rindra RAMILIARIJAONA
 
-Projet réalisé dans le cadre du **Bloc 6 — Projet Final (Lead & Demo Day)**, certification **RNCP CDSD**, **Jedha Bootcamp**.
+Projet réalisé dans le cadre du **Bloc 6 — Projet Final (Lead & Demo Day)**, certification **CDSD RNCP35288 - Niveau 6**, [**Jedha Bootcamp**](https://www.jedha.co/).
